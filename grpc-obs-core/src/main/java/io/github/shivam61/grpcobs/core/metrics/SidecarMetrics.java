@@ -1,5 +1,6 @@
 package io.github.shivam61.grpcobs.core.metrics;
 
+import io.github.shivam61.grpcobs.core.config.SidecarConfig.MetricsConfig;
 import io.github.shivam61.grpcobs.core.config.SidecarConfig.SamplingConfig;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
@@ -15,6 +16,7 @@ public class SidecarMetrics {
     private final MeterRegistry registry;
     private final CardinalityController cardinalityController;
     private final SamplingConfig samplingConfig;
+    private final MetricsConfig metricsConfig;
     
     private final AtomicInteger requestsInFlight = new AtomicInteger(0);
     private final ConcurrentHashMap<String, Histogram> internalHistograms = new ConcurrentHashMap<>();
@@ -27,10 +29,11 @@ public class SidecarMetrics {
     private final ConcurrentHashMap<String, DistributionSummary> requestSizeSummaries = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, DistributionSummary> responseSizeSummaries = new ConcurrentHashMap<>();
 
-    public SidecarMetrics(MeterRegistry registry, CardinalityController cardinalityController, SamplingConfig samplingConfig) {
+    public SidecarMetrics(MeterRegistry registry, CardinalityController cardinalityController, SamplingConfig samplingConfig, MetricsConfig metricsConfig) {
         this.registry = registry;
         this.cardinalityController = cardinalityController;
         this.samplingConfig = samplingConfig;
+        this.metricsConfig = metricsConfig;
         
         registry.gauge("grpc_requests_in_flight", requestsInFlight);
     }
@@ -70,13 +73,22 @@ public class SidecarMetrics {
                 .register(registry))
                 .increment();
 
-        latencyTimers.computeIfAbsent(statusKey, k -> Timer.builder("grpc_request_duration_seconds")
-                .tag("method", method)
-                .tag("grpc_status", statusCode)
-                .publishPercentileHistogram()
-                .publishPercentiles(0.5, 0.9, 0.95, 0.99)
-                .register(registry))
-                .record(durationNanos, TimeUnit.NANOSECONDS);
+        latencyTimers.computeIfAbsent(statusKey, k -> {
+            Timer.Builder builder = Timer.builder("grpc_request_duration_seconds")
+                    .tag("method", method)
+                    .tag("grpc_status", statusCode)
+                    .publishPercentileHistogram()
+                    .publishPercentiles(0.5, 0.9, 0.95, 0.99);
+            
+            if (metricsConfig.histogramBuckets() != null && !metricsConfig.histogramBuckets().isEmpty()) {
+                java.time.Duration[] slos = metricsConfig.histogramBuckets().stream()
+                        .map(d -> java.time.Duration.ofNanos((long) (d * 1_000_000_000L)))
+                        .toArray(java.time.Duration[]::new);
+                builder.serviceLevelObjectives(slos);
+            }
+            
+            return builder.register(registry);
+        }).record(durationNanos, TimeUnit.NANOSECONDS);
                 
         // Efficient HdrHistogram recording
         internalHistograms.computeIfAbsent(method, k -> new Histogram(3600000000000L, 3))

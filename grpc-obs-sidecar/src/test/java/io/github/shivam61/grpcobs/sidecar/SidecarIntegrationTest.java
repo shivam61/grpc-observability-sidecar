@@ -48,7 +48,9 @@ class SidecarIntegrationTest {
         // Sidecar Setup
         meterRegistry = new SimpleMeterRegistry();
         CardinalityController cardinalityController = new CardinalityController(10, "__other__", Collections.emptySet());
-        SidecarMetrics metrics = new SidecarMetrics(meterRegistry, cardinalityController, new SidecarConfig.SamplingConfig(false, 1.0, 1.0));
+        SidecarMetrics metrics = new SidecarMetrics(meterRegistry, cardinalityController, 
+                new SidecarConfig.SamplingConfig(false, 1.0, 1.0),
+                new SidecarConfig.MetricsConfig(9464, "/metrics", Collections.emptyList(), true));
         
         ManagedChannel upstreamChannel = InProcessChannelBuilder.forName(upstreamName).directExecutor().build();
         ProxyCallHandler proxyCallHandler = new ProxyCallHandler(upstreamChannel, metrics);

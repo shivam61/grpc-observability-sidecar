@@ -8,6 +8,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.protobuf.services.HealthStatusManager;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import org.slf4j.Logger;
@@ -48,7 +49,7 @@ public class SidecarServer {
                 config.cardinality().unknownMethodLabel(),
                 config.cardinality().methodAllowlist()
         );
-        SidecarMetrics metrics = new SidecarMetrics(prometheusRegistry, cardinalityController, config.sampling());
+        SidecarMetrics metrics = new SidecarMetrics(prometheusRegistry, cardinalityController, config.sampling(), config.metrics());
 
         upstreamChannel = ManagedChannelBuilder
                 .forAddress(config.upstream().host(), config.upstream().port())
@@ -58,8 +59,11 @@ public class SidecarServer {
         ProxyCallHandler proxyCallHandler = new ProxyCallHandler(upstreamChannel, metrics);
         ProxyHandlerRegistry handlerRegistry = new ProxyHandlerRegistry(proxyCallHandler);
 
+        HealthStatusManager healthStatusManager = new HealthStatusManager();
+
         grpcServer = ServerBuilder.forPort(config.server().listenPort())
                 .fallbackHandlerRegistry(handlerRegistry)
+                .addService(healthStatusManager.getHealthService())
                 .build()
                 .start();
 
