@@ -16,13 +16,13 @@ Observing gRPC microservices typically requires embedding language-specific inte
 
 ## Benchmark Results (Local Simulated)
 
-| Scenario | Total Requests | Duration (ms) | QPS |
-|----------|----------------|---------------|-----|
-| Direct (No Sidecar) | 5000 | ~31,000 | ~160 |
-| Sidecar Proxy | 5000 | ~47,000 | ~106 |
+| Scenario | Total Requests | Duration (ms) | QPS | p50 (ms) | p95 (ms) | p99 (ms) |
+|----------|----------------|---------------|-----|----------|----------|----------|
+| Direct (No Sidecar) | 5000 | ~49,000 | ~101 | 64 | 235 | 352 |
+| Sidecar Proxy | 5000 | ~65,000 | ~76 | 128 | 301 | 430 |
 
-**Estimated Sidecar Overhead per Request:** ~3.1 ms
-**Relative Time Overhead:** ~50% (primarily due to extra local TCP hop and context switching).
+**Estimated Sidecar Overhead per Request:** ~3.25 ms
+**Relative Time Overhead:** ~33% (primarily due to extra local TCP hop and context switching).
 
 *Note: These results represent a local development environment. In production sidecar deployments (e.g. Unix Domain Sockets or shared loopback), the overhead is expected to be lower.*
 
@@ -54,7 +54,7 @@ To protect Prometheus from label explosions (e.g., from generated or fuzzed meth
 
 ## Deadline propagation
 
-gRPC deadlines are inherently propagated because the sidecar forwards the HTTP/2 headers unmodified to the upstream.
+gRPC deadlines are actively extracted from the incoming request `Context` and propagated to the upstream call using `CallOptions.withDeadline()`.
 
 ## Sampling strategy
 
