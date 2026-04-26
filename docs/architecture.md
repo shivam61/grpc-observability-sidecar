@@ -4,17 +4,17 @@
 flowchart LR
     Client([gRPC Client])
     
-    subgraph Deployment Boundary [Deployment Boundary e.g., K8s Pod]
+    subgraph Deployment Boundary [Deployment Boundary e.g. K8s Pod]
         direction LR
         
         subgraph Sidecar [gRPC Observability Sidecar]
             direction TB
-            Proxy[ProxyCallHandler<br/><i>(Byte-Level Forwarding)</i>]
+            Proxy["ProxyCallHandler (Byte-Level Forwarding)"]
             
             subgraph Telemetry Core
                 direction TB
-                Card[Cardinality Controller<br/><i>(Label Protection)</i>]
-                Met[Metrics Engine<br/><i>(Micrometer & HdrHistogram)</i>]
+                Card["Cardinality Controller (Label Protection)"]
+                Met["Metrics Engine (Micrometer & HdrHistogram)"]
                 Card -.-> Met
             end
             
