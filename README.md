@@ -14,6 +14,49 @@ Observing gRPC microservices typically requires embedding language-specific inte
 - **Accurate Percentiles:** Uses `HdrHistogram` internally for high-fidelity latency snapshots without bucket-induced bias.
 - **Deadline Propagation:** Automatically honors and forwards gRPC deadlines to upstream services.
 
+## Architecture & High-Level Design (HLD)
+
+The sidecar operates as a completely transparent proxy. By avoiding Protobuf deserialization on the hot path, we drastically reduce memory allocations and GC pressure.
+
+```mermaid
+flowchart LR
+    Client([gRPC Client])
+    
+    subgraph Deployment Boundary [Deployment Boundary e.g., K8s Pod]
+        direction LR
+        
+        subgraph Sidecar [gRPC Observability Sidecar]
+            direction TB
+            Proxy[ProxyCallHandler<br/><i>(Byte-Level Forwarding)</i>]
+            
+            subgraph Telemetry Core
+                direction TB
+                Card[Cardinality Controller<br/><i>(Label Protection)</i>]
+                Met[Metrics Engine<br/><i>(Micrometer & HdrHistogram)</i>]
+                Card -.-> Met
+            end
+            
+            Proxy -.->|1. Validate Method Name| Card
+            Proxy -.->|3. Record Latency & Size| Met
+        end
+        
+        Upstream([Upstream gRPC Service])
+    end
+    
+    subgraph Observability Stack
+        Prometheus[(Prometheus)]
+        Grafana[Grafana Dashboard]
+    end
+
+    Client == "gRPC Request" ==> Proxy
+    Proxy == "2. Forward byte[]" ==> Upstream
+    Upstream -. "Response" .-> Proxy
+    Proxy -. "Response" .-> Client
+    
+    Prometheus -- "Scrape /metrics" --> Met
+    Grafana -- "Query" --> Prometheus
+```
+
 ## Benchmark Results (Local Simulated)
 
 | Scenario | Total Requests | Duration (ms) | QPS | p50 (ms) | p95 (ms) | p99 (ms) |
