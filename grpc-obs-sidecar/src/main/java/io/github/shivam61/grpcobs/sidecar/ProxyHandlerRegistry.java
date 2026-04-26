@@ -40,15 +40,9 @@ public class ProxyHandlerRegistry extends HandlerRegistry {
         @Override
         public byte[] parse(InputStream stream) {
             try {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = stream.read(buffer)) != -1) {
-                    baos.write(buffer, 0, bytesRead);
-                }
-                return baos.toByteArray();
+                return stream.readAllBytes();
             } catch (IOException e) {
-                throw new RuntimeException("Failed to read InputStream", e);
+                throw new RuntimeException("Failed to read message from InputStream", e);
             }
         }
     }

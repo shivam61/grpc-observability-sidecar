@@ -1,6 +1,27 @@
 version: '3.8'
 
 services:
+  upstream:
+    image: openjdk:21-slim
+    volumes:
+      - ../grpc-obs-example-service/target/grpc-obs-example-service-1.0.0-SNAPSHOT.jar:/app/service.jar
+    command: java -jar /app/service.jar
+    ports:
+      - "50051:50051"
+
+  sidecar:
+    image: openjdk:21-slim
+    volumes:
+      - ../grpc-obs-sidecar/target/grpc-obs-sidecar-1.0.0-SNAPSHOT.jar:/app/sidecar.jar
+      - ../grpc-obs-core/target/grpc-obs-core-1.0.0-SNAPSHOT.jar:/app/libs/core.jar
+    # Using host network for simplicity in local demo or linking
+    command: java -Dconfig=/etc/sidecar/config.yaml -cp "/app/sidecar.jar:/app/libs/*" io.github.shivam61.grpcobs.sidecar.SidecarServer
+    ports:
+      - "9090:9090"
+      - "9464:9464"
+    depends_on:
+      - upstream
+
   prometheus:
     image: prom/prometheus:latest
     ports:

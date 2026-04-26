@@ -1,8 +1,10 @@
-# Design Tradeoffs
+## Byte-array Marshalling vs. Zero-Copy
+- **Current Approach:** We use a `ByteArrayMarshaller` which reads the entire `InputStream` into a `byte[]`. This avoids Protobuf object allocation and deserialization, but still performs a heap allocation and a memory copy.
+- **Staff-level Optimization:** A true Zero-Copy proxy would use Netty's `FileRegion` or direct `ByteBuf` slices. However, gRPC-Java's abstraction layers make it difficult to access the underlying transport buffers without using internal API hooks.
 
-## Sidecar vs Interceptor
-- **Interceptor:** Runs in the same process. Lowest latency overhead, but language-specific (must rewrite for Java, Go, Python, etc) and couples observability concerns to application code.
-- **Sidecar:** Language agnostic. Easy to roll out infrastructure changes without redeploying apps. Adds a localhost network hop.
+## Metrics Registry Overhead
+- **Caching:** We cache `Counter` and `Timer` instances in `SidecarMetrics` using `ConcurrentHashMap`. This avoids the overhead of Micrometer's builder pattern and registry lookups on the hot path (every request).
+
 
 ## Histograms
 - **Prometheus Histograms:** Fixed buckets. Easy to query, but bad bucket choices lead to inaccurate percentiles.

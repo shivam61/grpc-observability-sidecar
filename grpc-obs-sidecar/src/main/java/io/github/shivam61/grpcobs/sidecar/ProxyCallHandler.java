@@ -23,7 +23,14 @@ public class ProxyCallHandler implements ServerCallHandler<byte[], byte[]> {
         
         metrics.recordRequestStarted(methodName);
 
-        ClientCall<byte[], byte[]> clientCall = upstreamChannel.newCall(call.getMethodDescriptor(), CallOptions.DEFAULT);
+        // Propagate deadline if present
+        Deadline deadline = Context.current().getDeadline();
+        CallOptions callOptions = CallOptions.DEFAULT;
+        if (deadline != null) {
+            callOptions = callOptions.withDeadline(deadline);
+        }
+
+        ClientCall<byte[], byte[]> clientCall = upstreamChannel.newCall(call.getMethodDescriptor(), callOptions);
 
         ProxyServerCallListener serverCallListener = new ProxyServerCallListener(call, clientCall, methodName, startTimeNanos, metrics);
         

@@ -1,30 +1,33 @@
 # Low-Overhead gRPC Observability Sidecar
 
-A production-ready sidecar designed to transparently intercept and measure gRPC traffic with minimal latency penalty.
+A production-oriented low-overhead prototype designed to explore the cost of telemetry in latency-critical systems through bounded cardinality, controlled sampling, and byte-level forwarding.
 
 ## Problem
 
-Observing gRPC microservices typically requires embedding language-specific interceptors (Java, Go, Python). This couples observability to the application layer, requiring code changes and redeployments just to tweak metrics.
+Observing gRPC microservices typically requires embedding language-specific interceptors. This couples observability to the application layer. This sidecar aims to provide a language-agnostic way to capture "Golden Signals" with minimal impact on tail latency.
 
-## Why observability has a cost
+## Key Features (Production-Oriented Prototype)
 
-Every metric recorded requires CPU cycles. Naive implementations block threads, allocate memory on the hot path, or create high-cardinality label explosions that crash Prometheus. 
+- **Byte-level Proxying:** Intercepts `byte[]` payloads directly, avoiding Protobuf deserialization overhead.
+- **Bounded Cardinality:** Prevents Prometheus label explosion by capping unique method names and normalizing unknowns.
+- **Dynamic Sampling:** Configurable success and error sample rates to reduce CPU overhead under load.
+- **Accurate Percentiles:** Uses `HdrHistogram` internally for high-fidelity latency snapshots without bucket-induced bias.
+- **Deadline Propagation:** Automatically honors and forwards gRPC deadlines to upstream services.
 
-This sidecar uses high-performance byte-level proxying (`ServerCallHandler<byte[], byte[]>`) combined with memory-bounded `HdrHistogram` and Micrometer to ensure that tracking latency doesn't *cause* latency.
+## Benchmark Results (Local Simulated)
 
-## Architecture
+| Scenario | Total Requests | Duration (ms) | QPS |
+|----------|----------------|---------------|-----|
+| Direct (No Sidecar) | 5000 | ~31,000 | ~160 |
+| Sidecar Proxy | 5000 | ~47,000 | ~106 |
 
-```mermaid
-graph TD
-    Client[gRPC Client] -->|Unary RPC| Proxy[Sidecar Proxy]
-    Proxy -->|Forwarded RPC| Upstream[Upstream Service]
-    Proxy -->|Record Latency| MetricsRegistry[Micrometer Registry]
-    MetricsRegistry -->|Scrape| Prometheus[Prometheus]
-    Prometheus -->|Query| Grafana[Grafana Dashboard]
-```
+**Estimated Sidecar Overhead per Request:** ~3.1 ms
+**Relative Time Overhead:** ~50% (primarily due to extra local TCP hop and context switching).
+
+*Note: These results represent a local development environment. In production sidecar deployments (e.g. Unix Domain Sockets or shared loopback), the overhead is expected to be lower.*
 
 ## Request flow
-
+...
 1. The client sends a gRPC request to the sidecar.
 2. The sidecar extracts the full method name (e.g. `/example.payment.PaymentService/Authorize`).
 3. The method name is validated against the `CardinalityController`.

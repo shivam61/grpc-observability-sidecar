@@ -48,7 +48,7 @@ public class SidecarServer {
                 config.cardinality().unknownMethodLabel(),
                 config.cardinality().methodAllowlist()
         );
-        SidecarMetrics metrics = new SidecarMetrics(prometheusRegistry, cardinalityController);
+        SidecarMetrics metrics = new SidecarMetrics(prometheusRegistry, cardinalityController, config.sampling());
 
         upstreamChannel = ManagedChannelBuilder
                 .forAddress(config.upstream().host(), config.upstream().port())

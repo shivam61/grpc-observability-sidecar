@@ -18,15 +18,27 @@ public class CardinalityController {
     }
 
     public String normalizeMethod(String rawMethodName) {
-        return normalizedCache.computeIfAbsent(rawMethodName, k -> {
-            if (allowlist != null && !allowlist.isEmpty() && !allowlist.contains(k)) {
-                return unknownMethodLabel;
-            }
-            if (uniqueMethodsCount.incrementAndGet() > maxMethods) {
-                uniqueMethodsCount.decrementAndGet();
-                return unknownMethodLabel;
-            }
-            return k;
-        });
+        String cached = normalizedCache.get(rawMethodName);
+        if (cached != null) {
+            return cached;
+        }
+
+        if (allowlist != null && !allowlist.isEmpty() && !allowlist.contains(rawMethodName)) {
+            return unknownMethodLabel;
+        }
+
+        if (uniqueMethodsCount.get() >= maxMethods) {
+            return unknownMethodLabel;
+        }
+
+        // Only cache if we are within bounds
+        int count = uniqueMethodsCount.incrementAndGet();
+        if (count > maxMethods) {
+            uniqueMethodsCount.decrementAndGet();
+            return unknownMethodLabel;
+        }
+
+        normalizedCache.put(rawMethodName, rawMethodName);
+        return rawMethodName;
     }
 }
