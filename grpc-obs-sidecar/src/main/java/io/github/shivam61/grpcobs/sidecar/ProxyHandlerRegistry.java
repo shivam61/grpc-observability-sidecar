@@ -22,7 +22,7 @@ public class ProxyHandlerRegistry extends HandlerRegistry {
     @Override
     public ServerMethodDefinition<?, ?> lookupMethod(String methodName, String authority) {
         MethodDescriptor<byte[], byte[]> methodDescriptor = MethodDescriptor.<byte[], byte[]>newBuilder()
-                .setType(MethodDescriptor.MethodType.UNARY)
+                .setType(MethodDescriptor.MethodType.UNKNOWN)
                 .setFullMethodName(methodName)
                 .setRequestMarshaller(new ByteArrayMarshaller())
                 .setResponseMarshaller(new ByteArrayMarshaller())

@@ -10,6 +10,7 @@ service PaymentService {
   rpc Authorize(AuthorizeRequest) returns (AuthorizeResponse);
   rpc Capture(CaptureRequest) returns (CaptureResponse);
   rpc Refund(RefundRequest) returns (RefundResponse);
+  rpc ProcessStream(stream AuthorizeRequest) returns (stream AuthorizeResponse);
 }
 
 message AuthorizeRequest {

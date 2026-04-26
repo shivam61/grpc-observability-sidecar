@@ -9,9 +9,12 @@ import io.github.shivam61.grpcobs.example.payment.RefundRequest;
 import io.github.shivam61.grpcobs.example.payment.RefundResponse;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.Random;
 
 public class PaymentServiceImpl extends PaymentServiceGrpc.PaymentServiceImplBase {
+    private static final Logger logger = LoggerFactory.getLogger(PaymentServiceImpl.class);
 
     private final Random random = new Random();
 
@@ -58,6 +61,31 @@ public class PaymentServiceImpl extends PaymentServiceGrpc.PaymentServiceImplBas
                 .build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
+    }
+
+    @Override
+    public StreamObserver<AuthorizeRequest> processStream(StreamObserver<AuthorizeResponse> responseObserver) {
+        return new StreamObserver<>() {
+            @Override
+            public void onNext(AuthorizeRequest request) {
+                AuthorizeResponse response = AuthorizeResponse.newBuilder()
+                        .setTransactionId("stream_" + System.currentTimeMillis())
+                        .setStatus("AUTHORIZED")
+                        .setExtraPayload(request.getExtraPayload())
+                        .build();
+                responseObserver.onNext(response);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                logger.error("Stream error", t);
+            }
+
+            @Override
+            public void onCompleted() {
+                responseObserver.onCompleted();
+            }
+        };
     }
 
     private void simulateWork() {

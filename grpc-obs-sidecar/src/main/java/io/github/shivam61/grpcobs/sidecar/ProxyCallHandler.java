@@ -44,6 +44,9 @@ public class ProxyCallHandler implements ServerCallHandler<byte[], byte[]> {
             public void onMessage(byte[] message) {
                 metrics.recordResponseBytes(methodName, message.length);
                 call.sendMessage(message);
+                if (call.isReady()) {
+                    clientCall.request(1);
+                }
             }
 
             @Override
@@ -54,11 +57,12 @@ public class ProxyCallHandler implements ServerCallHandler<byte[], byte[]> {
             @Override
             public void onReady() {
                 if (call.isReady()) {
-                    call.request(1);
+                    clientCall.request(1);
                 }
             }
         }, headers);
 
+        // Standard gRPC proxying: request 1, then rely on onReady/onMessage to request more.
         call.request(1);
         clientCall.request(1);
 
@@ -89,6 +93,9 @@ public class ProxyCallHandler implements ServerCallHandler<byte[], byte[]> {
         public void onMessage(byte[] message) {
             metrics.recordRequestBytes(methodName, message.length);
             clientCall.sendMessage(message);
+            if (clientCall.isReady()) {
+                serverCall.request(1);
+            }
         }
 
         @Override
@@ -103,14 +110,9 @@ public class ProxyCallHandler implements ServerCallHandler<byte[], byte[]> {
         }
 
         @Override
-        public void onComplete() {
-            // Wait for upstream to close
-        }
-
-        @Override
         public void onReady() {
             if (clientCall.isReady()) {
-                clientCall.request(1);
+                serverCall.request(1);
             }
         }
 
