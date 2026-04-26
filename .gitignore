@@ -1,0 +1,8 @@
+target/
+*.iml
+.idea/
+.DS_Store
+.mvn/
+*.log
+benchmark-results.json
+benchmark-results.md

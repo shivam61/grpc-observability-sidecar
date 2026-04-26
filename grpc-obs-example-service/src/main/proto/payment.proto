@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package example.payment;
+
+option java_multiple_files = true;
+option java_package = "io.github.shivam61.grpcobs.example.payment";
+option java_outer_classname = "PaymentProto";
+
+service PaymentService {
+  rpc Authorize(AuthorizeRequest) returns (AuthorizeResponse);
+  rpc Capture(CaptureRequest) returns (CaptureResponse);
+  rpc Refund(RefundRequest) returns (RefundResponse);
+}
+
+message AuthorizeRequest {
+  string request_id = 1;
+  string user_id = 2;
+  double amount = 3;
+  string currency = 4;
+  string payment_method = 5;
+  bytes extra_payload = 6; // for testing payload size
+}
+
+message AuthorizeResponse {
+  string transaction_id = 1;
+  string status = 2;
+  string reason = 3;
+  bytes extra_payload = 4; // for testing payload size
+}
+
+message CaptureRequest {
+  string transaction_id = 1;
+  double amount = 2;
+  bytes extra_payload = 3;
+}
+
+message CaptureResponse {
+  string status = 1;
+  bytes extra_payload = 2;
+}
+
+message RefundRequest {
+  string transaction_id = 1;
+  double amount = 2;
+  string reason = 3;
+  bytes extra_payload = 4;
+}
+
+message RefundResponse {
+  string status = 1;
+  bytes extra_payload = 2;
+}
